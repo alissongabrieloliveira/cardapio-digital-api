@@ -194,6 +194,74 @@ class PedidoController {
     }
   }
 
+  async show(req, res) {
+    try {
+      const { id } = req.params;
+      const tenant_id = req.usuario.tenant_id;
+
+      const pedido = await knex("pedidos")
+        .select(
+          "pedidos.*",
+          "mesas.numero as mesa_numero",
+          "clientes.nome as cliente_nome",
+          "clientes.telefone as cliente_telefone",
+          "enderecos_cliente.rua",
+          "enderecos_cliente.numero as endereco_numero",
+          "enderecos_cliente.bairro",
+          "enderecos_cliente.cidade",
+          "enderecos_cliente.referencia",
+        )
+        .leftJoin("mesas", "pedidos.mesa_id", "mesas.id")
+        .leftJoin("clientes", "pedidos.cliente_id", "clientes.id")
+        .leftJoin(
+          "enderecos_cliente",
+          "pedidos.endereco_entrega_id",
+          "enderecos_cliente.id",
+        )
+        .where("pedidos.id", id)
+        .andWhere("pedidos.tenant_id", tenant_id)
+        .first();
+
+      if (!pedido) {
+        return res.status(404).json({
+          erro: "Pedido não encontrado ou não pertence a este estabelecimento.",
+        });
+      }
+
+      const itens = await knex("pedido_itens")
+        .where("pedido_id", pedido.id)
+        .orderBy("created_at", "asc");
+
+      if (itens.length > 0) {
+        const itensIds = itens.map((item) => item.id);
+
+        const adicionais = await knex("pedido_itens_adicionais").whereIn(
+          "pedido_item_id",
+          itensIds,
+        );
+
+        pedido.itens = itens.map((item) => {
+          return {
+            ...item,
+
+            adicionais: adicionais.filter(
+              (adc) => adc.pedido_item_id === item.id,
+            ),
+          };
+        });
+      } else {
+        pedido.itens = [];
+      }
+
+      return res.json(pedido);
+    } catch (error) {
+      console.error(error);
+      return res
+        .status(500)
+        .json({ erro: "Erro interno ao buscar os detalhes do pedido." });
+    }
+  }
+
   async updateStatus(req, res) {
     const trx = await knex.transaction();
 

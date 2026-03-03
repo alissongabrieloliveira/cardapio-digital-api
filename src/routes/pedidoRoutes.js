@@ -8,6 +8,7 @@ rotas.use(authMiddleware);
 
 rotas.post("/", PedidoController.create);
 rotas.get("/", PedidoController.index);
+rotas.get("/:id", PedidoController.show);
 
 rotas.patch("/:id/status", PedidoController.updateStatus);
 
