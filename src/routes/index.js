@@ -8,6 +8,7 @@ const adicionalRoutes = require("./adicionalRoutes");
 const mesaRoutes = require("./mesaRoutes");
 const clienteRoutes = require("./clienteRoutes");
 const pedidoRoutes = require("./pedidoRoutes");
+const movimentacaoRoutes = require("./movimentacaoRoutes");
 
 const rotas = Router();
 
@@ -20,5 +21,6 @@ rotas.use("/adicionais", adicionalRoutes);
 rotas.use("/mesas", mesaRoutes);
 rotas.use("/clientes", clienteRoutes);
 rotas.use("/pedidos", pedidoRoutes);
+rotas.use("/financeiro", movimentacaoRoutes);
 
 module.exports = rotas;
