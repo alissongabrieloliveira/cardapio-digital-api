@@ -9,4 +9,6 @@ rotas.use(authMiddleware);
 rotas.post("/", PedidoController.create);
 rotas.get("/", PedidoController.index);
 
+rotas.patch("/:id/status", PedidoController.updateStatus);
+
 module.exports = rotas;

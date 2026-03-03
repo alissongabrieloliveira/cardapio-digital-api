@@ -26,6 +26,17 @@ const pedidoSchema = z.object({
     .min(1, "O pedido deve ter pelo menos um item"),
 });
 
+const statusPedidoSchema = z.object({
+  status: z.enum([
+    "pendente",
+    "preparo",
+    "pronto",
+    "entrega",
+    "finalizado",
+    "cancelado",
+  ]),
+});
+
 class PedidoController {
   async create(req, res) {
     const trx = await knex.transaction();
@@ -180,6 +191,72 @@ class PedidoController {
     } catch (error) {
       console.error(error);
       return res.status(500).json({ erro: "Erro interno ao listar pedidos." });
+    }
+  }
+
+  async updateStatus(req, res) {
+    const trx = await knex.transaction();
+
+    try {
+      const { id } = req.params;
+      const { status: novoStatus } = statusPedidoSchema.parse(req.body);
+      const tenant_id = req.usuario.tenant_id;
+
+      const pedido = await trx("pedidos").where({ id, tenant_id }).first();
+
+      if (!pedido) {
+        throw new Error(
+          "Pedido não encontrado ou não pertence a este estabelecimento.",
+        );
+      }
+
+      if (pedido.status === "finalizado" || pedido.status === "cancelado") {
+        throw new Error(
+          `Não é possível alterar o status de um pedido que já está ${pedido.status}.`,
+        );
+      }
+
+      const [pedidoAtualizado] = await trx("pedidos")
+        .where({ id, tenant_id })
+        .update({
+          status: novoStatus,
+          updated_at: knex.fn.now(),
+        })
+        .returning("*");
+
+      if (novoStatus === "finalizado") {
+        await trx("movimentacoes_financeiras").insert({
+          tenant_id,
+          pedido_id: pedido.id,
+          tipo: "entrada",
+          descricao: `Receita referente ao Pedido concluído. Cliente/Mesa associada.`,
+          valor: pedido.total,
+        });
+      }
+
+      await trx.commit();
+
+      return res.json({
+        mensagem: `Status atualizado para ${novoStatus} com sucesso.`,
+        pedido: pedidoAtualizado,
+      });
+    } catch (error) {
+      await trx.rollback();
+
+      if (error instanceof z.ZodError) {
+        return res
+          .status(400)
+          .json({ erro: "Status inválido", detalhes: error.errors });
+      }
+
+      if (error.message) {
+        return res.status(400).json({ erro: error.message });
+      }
+
+      console.error(error);
+      return res
+        .status(500)
+        .json({ erro: "Erro interno ao atualizar o status do pedido." });
     }
   }
 }
