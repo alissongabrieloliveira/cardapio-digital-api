@@ -165,6 +165,81 @@ class EstabelecimentoController {
         .json({ erro: "Erro interno ao excluir estabelecimento." });
     }
   }
+
+  async me(req, res) {
+    try {
+      const tenant_id = req.usuario.tenant_id;
+
+      const estabelecimento = await knex("estabelecimentos")
+        .where({ id: tenant_id })
+        .first();
+
+      if (!estabelecimento) {
+        return res
+          .status(404)
+          .json({ erro: "Estabelecimento não encontrado." });
+      }
+
+      return res.json(estabelecimento);
+    } catch (error) {
+      console.error(error);
+      return res
+        .status(500)
+        .json({ erro: "Erro interno ao buscar dados do estabelecimento." });
+    }
+  }
+
+  async updateMe(req, res) {
+    try {
+      const tenant_id = req.usuario.tenant_id;
+
+      const {
+        nome,
+        slogan,
+        slug,
+        logo_url,
+        banner_url,
+        horario_funcionamento,
+        taxa_delivery_fixa,
+        ativo,
+      } = req.body;
+
+      if (slug) {
+        const slugExistente = await knex("estabelecimentos")
+          .where({ slug })
+          .whereNot({ id: tenant_id })
+          .first();
+
+        if (slugExistente) {
+          return res.status(400).json({
+            erro: "Este link (slug) já está sendo usado por outro restaurante.",
+          });
+        }
+      }
+
+      const [estabelecimentoAtualizado] = await knex("estabelecimentos")
+        .where({ id: tenant_id })
+        .update({
+          nome,
+          slogan,
+          slug,
+          logo_url,
+          banner_url,
+          horario_funcionamento,
+          taxa_delivery_fixa,
+          ativo,
+          updated_at: knex.fn.now(),
+        })
+        .returning("*");
+
+      return res.json(estabelecimentoAtualizado);
+    } catch (error) {
+      console.error(error);
+      return res
+        .status(500)
+        .json({ erro: "Erro interno ao atualizar configurações." });
+    }
+  }
 }
 
 module.exports = new EstabelecimentoController();
