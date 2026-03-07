@@ -202,6 +202,11 @@ class EstabelecimentoController {
         horario_funcionamento,
         taxa_delivery_fixa,
         ativo,
+        endereco_rua,
+        endereco_numero,
+        endereco_bairro,
+        endereco_cidade,
+        endereco_uf,
       } = req.body;
 
       if (slug) {
@@ -212,7 +217,7 @@ class EstabelecimentoController {
 
         if (slugExistente) {
           return res.status(400).json({
-            erro: "Este link (slug) já está sendo usado por outro restaurante.",
+            erro: "Este link (slug) já está a ser usado por outro restaurante.",
           });
         }
       }
@@ -228,6 +233,11 @@ class EstabelecimentoController {
           horario_funcionamento,
           taxa_delivery_fixa,
           ativo,
+          endereco_rua,
+          endereco_numero,
+          endereco_bairro,
+          endereco_cidade,
+          endereco_uf,
           updated_at: knex.fn.now(),
         })
         .returning("*");
